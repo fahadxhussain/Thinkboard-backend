@@ -48,9 +48,22 @@ app.use((req, res, next) => {
 app.use(express.json())
 app.use(rateLimiter)
 
+// Set proper headers to avoid CSP issues
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.status(200).json({ message: 'Backend is working!', timestamp: new Date().toISOString() });
+});
+
+// Handle favicon requests to prevent CSP errors
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end(); // No content response
 });
 
 // Written after moving the routes
