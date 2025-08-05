@@ -31,9 +31,18 @@ app.use((req, res, next) => {
            origin: 'http://localhost:5173'
         }))
     } else {
-        // Production CORS - allow your frontend domain
+        // More permissive CORS for production debugging
         app.use(cors({
-            origin: ['https://thinkboard-frontend-black.vercel.app', 'https://thinkboard-frontend-black.vercel.app/'],
+            origin: function (origin, callback) {
+                // Allow requests with no origin (like mobile apps or curl requests)
+                if (!origin) return callback(null, true);
+                // Allow your frontend domain
+                if (origin.includes('thinkboard-frontend-black.vercel.app')) {
+                    return callback(null, true);
+                }
+                // For debugging, allow all origins temporarily
+                return callback(null, true);
+            },
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
@@ -50,8 +59,15 @@ app.use((req, res, next) => {
     next();
 });
 
-// Set proper headers to avoid CSP issues
+// Set proper headers to avoid CSP issues and ensure CORS
 app.use((req, res, next) => {
+    // Set CORS headers explicitly
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Set security headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');

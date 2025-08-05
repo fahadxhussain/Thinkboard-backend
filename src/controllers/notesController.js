@@ -3,13 +3,15 @@ import Note from "../models/Note.js"
 // if not using a parameter we can skip it by adding _ instead
 export async function getAllNotes (_, res) {
     try{
+        console.log('getAllNotes called - attempting to fetch notes');
         const notes = await Note.find().sort({createdAt: -1}) // createdAt: -1 will reverse teh data so we see the latest first
+        console.log(`Found ${notes.length} notes`);
         res.status(200).json(notes)
 
     }
     catch(error){
-        console.log(error.message)
-        res.status(500).json({message: "Intenal Server Error"})
+        console.log('Error in getAllNotes:', error.message)
+        res.status(500).json({message: "Internal Server Error"})
     }
 }
 
