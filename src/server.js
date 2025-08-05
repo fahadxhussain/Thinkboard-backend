@@ -4,9 +4,6 @@ import express from 'express';
 import cors from 'cors'
 import dotenv from 'dotenv';
 
-import path from 'path'; // This is used to handle file paths
-
-
 // const express = require('express'); //When the "type" is default which is "commonjs"
 import notesRouter from './routes/notesRouters.js'; // Importing the notes router we created
 import { connectDB } from './config/db.js';
@@ -18,10 +15,6 @@ dotenv.config();
 // `app` now holds the actual server — we’ll use it to define how it should respond to requests.
 const app = express();
 const PORT = process.env.PORT || 5001; // Use the PORT from environment variables or default to 5001
-//connectDB(); // Connect to the MongoDB database
-// Commenting this function here becauseFirst we should connect the application to db and then start listening on port
-
-const __dirname = path.resolve(); // This gives us the absolute path to the current directory
 
 //MIDDLEWARE
 // Ths is a sample middleware function
@@ -40,8 +33,13 @@ app.use((req, res, next) => {
     } else {
         // Allow your Vercel frontend domain in production
         app.use(cors({
-            origin: process.env.FRONTEND_URL || 'https://thinkboard-frontend-black.vercel.app',
-            credentials: true
+            origin: [
+                'https://thinkboard-frontend-black.vercel.app',
+                /\.vercel\.app$/
+            ],
+            credentials: true,
+            methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization']
         }))
     }
     
@@ -59,6 +57,20 @@ app.use((req, res, next) => {
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.status(200).json({ message: 'Backend is working!', timestamp: new Date().toISOString() });
+});
+
+// Root endpoint - for when someone visits the backend URL directly
+app.get('/', (req, res) => {
+    res.status(200).json({ 
+        message: 'ThinkBoard Backend API',
+        status: 'Running',
+        endpoints: {
+            health: '/api/health',
+            notes: '/api/notes',
+            favicon: '/favicon.ico'
+        },
+        note: 'This is an API server. Use the endpoints above or access via your frontend app.'
+    });
 });
 
 // Handle favicon requests to prevent CSP errors
@@ -79,27 +91,18 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Handle 404 for unmatched routes
-app.use('*', (req, res) => {
-    res.status(404).json({ message: 'Route not found' });
+// Handle 404 for unmatched routes - but NOT for catch-all
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ message: 'API route not found' });
 });
 
+// Remove the static file serving and catch-all route for serverless
+// This conflicts with API routes in serverless environment
+
+// Remove the static file serving and catch-all route for serverless
+// This conflicts with API routes in serverless environment
+
 // Its a bit confusing as there is no method named as notesRouter in the notesRouters file
-// But whatever I name it here in server.js it will grab the method or anything exported from notesRouters.js file which is router in this case
-// import notesRouter from './routes/notesRouters.js';
-// import myRouter from './routes/notesRouters.js';
-// import banana from './routes/notesRouters.js';
-// EACH OF THEM WILL BE THE SAME THING
-
-
-
-if(process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, '../frontend', 'dist', 'index.html'));
-    }); 
-}
 
 
 /* Now we have to move routes to seperate files for production purpose
