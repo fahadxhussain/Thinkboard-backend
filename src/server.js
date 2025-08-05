@@ -31,9 +31,9 @@ app.use((req, res, next) => {
            origin: 'http://localhost:5173'
         }))
     } else {
-        // More permissive CORS for debugging
+        // Production CORS - allow your frontend domain
         app.use(cors({
-            origin: true, // Allow all origins temporarily
+            origin: ['https://thinkboard-frontend-black.vercel.app', 'https://thinkboard-frontend-black.vercel.app/'],
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
@@ -94,6 +94,10 @@ app.get('/', (req, res) => {
 app.get('/favicon.ico', (req, res) => {
     res.status(204).end(); // No content response
 });
+
+// Handle preflight requests for CORS
+app.options('/api/notes', cors());
+app.options('/api/notes/*', cors());
 
 // Written after moving the routes
 // Whenever someone sends a request starting with /api/notes, use notesRouter to handle it.
