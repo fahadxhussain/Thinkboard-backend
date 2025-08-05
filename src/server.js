@@ -69,6 +69,21 @@ app.get('/favicon.ico', (req, res) => {
 // Written after moving the routes
 // Whenever someone sends a request starting with /api/notes, use notesRouter to handle it.
 app.use('/api/notes', notesRouter);
+
+// Global error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({ 
+        message: 'Internal Server Error',
+        error: process.env.NODE_ENV === 'production' ? {} : err.message
+    });
+});
+
+// Handle 404 for unmatched routes
+app.use('*', (req, res) => {
+    res.status(404).json({ message: 'Route not found' });
+});
+
 // Its a bit confusing as there is no method named as notesRouter in the notesRouters file
 // But whatever I name it here in server.js it will grab the method or anything exported from notesRouters.js file which is router in this case
 // import notesRouter from './routes/notesRouters.js';
@@ -144,11 +159,18 @@ app.delete('/api/notes/:id', (req, res) => {
 */
 
 
-connectDB().then(()=> {
-    app.listen(PORT, ()=> {
-        console.log(`Server listening at Port: ${PORT}`)
+// Connect to database but don't start server in serverless environment
+if (process.env.NODE_ENV !== 'production') {
+    // Only start server locally
+    connectDB().then(() => {
+        app.listen(PORT, () => {
+            console.log(`Server listening at Port: ${PORT}`)
+        });
     });
-});
+} else {
+    // In production (Vercel), just connect to DB
+    connectDB();
+}
 
 // Export for Vercel serverless deployment
 export default app;
