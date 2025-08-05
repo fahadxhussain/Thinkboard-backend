@@ -31,20 +31,24 @@ app.use((req, res, next) => {
            origin: 'http://localhost:5173'
         }))
     } else {
-        // Allow your Vercel frontend domain in production
+        // More permissive CORS for debugging
         app.use(cors({
-            origin: [
-                'https://thinkboard-frontend-black.vercel.app',
-                /\.vercel\.app$/
-            ],
+            origin: true, // Allow all origins temporarily
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-            allowedHeaders: ['Content-Type', 'Authorization']
+            allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+            optionsSuccessStatus: 200
         }))
     }
     
 app.use(express.json())
 app.use(rateLimiter)
+
+// Add request logging for debugging
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path}`, req.body);
+    next();
+});
 
 // Set proper headers to avoid CSP issues
 app.use((req, res, next) => {
@@ -56,7 +60,20 @@ app.use((req, res, next) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-    res.status(200).json({ message: 'Backend is working!', timestamp: new Date().toISOString() });
+    try {
+        res.status(200).json({ 
+            message: 'Backend is working!', 
+            timestamp: new Date().toISOString(),
+            env: process.env.NODE_ENV,
+            mongoUri: process.env.MONGO_URI ? 'Connected' : 'Missing'
+        });
+    } catch (error) {
+        console.error('Health check error:', error);
+        res.status(500).json({ 
+            message: 'Health check failed', 
+            error: error.message 
+        });
+    }
 });
 
 // Root endpoint - for when someone visits the backend URL directly
@@ -169,10 +186,14 @@ if (process.env.NODE_ENV !== 'production') {
         app.listen(PORT, () => {
             console.log(`Server listening at Port: ${PORT}`)
         });
+    }).catch(err => {
+        console.error('Failed to connect to database:', err);
     });
 } else {
     // In production (Vercel), just connect to DB
-    connectDB();
+    connectDB().catch(err => {
+        console.error('Failed to connect to database in production:', err);
+    });
 }
 
 // Export for Vercel serverless deployment
