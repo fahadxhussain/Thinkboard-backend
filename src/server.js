@@ -37,12 +37,21 @@ app.use((req, res, next) => {
        app.use(cors({
            origin: 'http://localhost:5173'
         }))
+    } else {
+        // Allow your Vercel frontend domain in production
+        app.use(cors({
+            origin: process.env.FRONTEND_URL || 'https://thinkboard-frontend-black.vercel.app',
+            credentials: true
+        }))
     }
     
 app.use(express.json())
 app.use(rateLimiter)
 
-
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ message: 'Backend is working!', timestamp: new Date().toISOString() });
+});
 
 // Written after moving the routes
 // Whenever someone sends a request starting with /api/notes, use notesRouter to handle it.
